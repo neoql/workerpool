@@ -77,8 +77,8 @@ func (pool *implWorkerPool) Stop() {
 	for ele = pool.workers.Front(); ele != nil; ele = ele.next {
 		ele.value.taskCh <- task{fn: nil}
 	}
-	pool.workers.root.prev = nil
-	pool.workers.root.next = nil
+	pool.workers.ResetFront(nil)
+	pool.mustStop = true
 	pool.lock.Unlock()
 }
 
@@ -124,14 +124,19 @@ func (pool *implWorkerPool) clean() {
 	pool.lock.Lock()
 
 	var ele *element
-	for ele = pool.workers.Front(); ele != nil; ele = ele.next {
+	first := pool.workers.Front()
+	for ele = first; ele != nil; ele = ele.next {
 		w := ele.value
 		if currentTime.Sub(w.lastUseTime) < maxIdleWorkerDuration {
-			pool.workers.ResetFront(ele)
 			break
 		}
+	}
+	pool.workers.ResetFront(ele)
 
-		w.taskCh <- task{fn: nil}
+	pool.lock.Unlock()
+
+	for ele = first; ele != nil; ele = ele.next {
+		ele.value.taskCh <- task{fn: nil}
 	}
 }
 

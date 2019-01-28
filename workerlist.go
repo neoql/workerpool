@@ -53,6 +53,8 @@ func (wl *workerlist) PopBack() (w *worker, ok bool) {
 
 func (wl *workerlist) ResetFront(e *element) {
 	if e == nil {
+		wl.root.next = nil
+		wl.root.prev = nil
 		return
 	}
 
